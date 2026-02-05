@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạp Hóa Hùng PC</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <!-- Header -->
+<header class="header">
+    <div class="container">
+        <div class="logo">
+            <!-- Chỗ này bạn có thể chèn logo -->
+            <img src="logo.png" alt="GameShop Logo" class="logo-img">
+            <!-- Hoặc chỉ dùng text nếu chưa có logo -->
+            <h1><i class="fas fa-gamepad"></i> GameShop</h1>
+        </div>
+        <nav class="nav">
+            <ul>
+                <li><a href="#home" onclick="showHome()">Trang chủ</a></li>
+                <li class="dropdown">
+    <a href="#">Danh mục <i class="fas fa-chevron-down"></i></a>
+    <!-- JS sẽ tự render danh mục vào đây -->
+    <div class="dropdown-content" id="nav-category-dropdown">
+        <!-- Nội dung sẽ được script.js đổ vào -->
+    </div>
+</li>
+                
+            </ul>
+        </nav>
+    </div>
+</header>
+
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Home Section -->
+        <section id="home-section" class="section active">
+            <!-- Hero Section -->
+            <div class="hero">
+                <div class="container">
+                    <div class="hero-content">
+                        <h2>Cung Cấp Các Dịch Vụ Hack Uy Tín</h2>
+                        <p>Chuyên Cung Cấp HACK GAME An Toàn</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Grid -->
+            <div class="categories-grid" id="home-categories-grid">
+    <!-- Nội dung danh mục sẽ được script.js render từ dữ liệu admin -->
+</div>
+        </section>
+
+        <!-- Category Section -->
+        <section id="category-section" class="section">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showHome()">Trang chủ</a> > <span id="current-category">Danh mục</span>
+                </div>
+                <h2 id="category-title">Danh mục sản phẩm</h2>
+                <div class="products-grid" id="category-products">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Detail Section -->
+        <section id="product-detail-section" class="section">
+            <div class="container">
+                <div class="breadcrumb">
+                    <a href="#" onclick="showHome()">Trang chủ</a> > 
+                    <a href="#" onclick="goBackToCategory()">Danh mục</a> > 
+                    <span id="current-product">Chi tiết sản phẩm</span>
+                </div>
+                <div id="product-detail-content">
+                    <!-- Product detail will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="contact">
+            <div class="container">
+                <h2></h2>
+                <div class="contact-info">
+                    
+                    
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Cart Modal -->
+
+
+    <!-- Zalo Floating Button -->
+    <div class="zalo-float" id="zalo-button">
+        <div class="zalo-bubble">
+            <div class="zalo-icon">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="white">
+                    <path d="M7.5 2C3.9 2 1 4.9 1 8.5c0 2.1 1 4 2.6 5.2L3 18l4.5-1.5C8.3 16.8 9 17 9.5 17c3.6 0 6.5-2.9 6.5-6.5S13.1 2 9.5 2H7.5z"/>
+                    <circle cx="16.5" cy="8.5" r="5.5"/>
+                </svg>
+            </div>
+            <div class="zalo-text">Zalo</div>
+        </div>
+        <div class="zalo-pulse"></div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; Tạp Hóa Hùng PC.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

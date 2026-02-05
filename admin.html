@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - GameShop</title>
+    <link rel="stylesheet" href="admin-style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h2><i class="fas fa-shield-alt"></i> Admin Login</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Tên đăng nhập" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Mật khẩu" required>
+                </div>
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" class="admin-container" style="display: none;">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fas fa-gamepad"></i> GameShop Admin</h3>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="#products" onclick="showSection('products')">
+                        <i class="fas fa-box"></i> Quản lý sản phẩm
+                    </a>
+                </li>
+                <li>
+                    <a href="#categories" onclick="showSection('categories')">
+                        <i class="fas fa-tags"></i> Danh mục
+                    </a>
+                </li>
+                <li>
+                    <a href="#settings" onclick="showSection('settings')">
+                        <i class="fas fa-cog"></i> Cài đặt
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="admin-header">
+                <div class="header-right">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Admin</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Products Section -->
+            <section id="products-section" class="admin-section">
+                <div class="section-header">
+                    <h2>Quản lý sản phẩm</h2>
+                    <button class="btn btn-primary" onclick="showAddProductModal()">
+                        <i class="fas fa-plus"></i> Thêm sản phẩm
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hình ảnh</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Danh mục</th>
+                            <th>Giá</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="products-table">
+                        <!-- Products will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Orders Section (chưa dùng, để nguyên) -->
+            <section id="orders-section" class="admin-section">
+                <div class="section-header">
+                    <h2>Quản lý đơn hàng</h2>
+                    <div class="filter-controls">
+                        <select id="order-status-filter">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="pending">Chờ xử lý</option>
+                            <option value="processing">Đang xử lý</option>
+                            <option value="completed">Hoàn thành</option>
+                            <option value="cancelled">Đã hủy</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Sản phẩm</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày tạo</th>
+                            <th>Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="orders-table">
+                        <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Customers Section (chưa dùng, để nguyên) -->
+            <section id="customers-section" class="admin-section">
+                <div class="section-header">
+                    <h2>Quản lý khách hàng</h2>
+                </div>
+                <div class="table-container">
+                    <table class="admin-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên khách hàng</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Tổng đơn</th>
+                            <th>Ngày tham gia</th>
+                            <th>Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="customers-table">
+                        <!-- Customers will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Categories Section -->
+            <section id="categories-section" class="admin-section">
+                <div class="section-header">
+                    <h2>Quản lý danh mục</h2>
+                    <button class="btn btn-primary" onclick="showAddCategoryModal()">
+                        <i class="fas fa-plus"></i> Thêm danh mục
+                    </button>
+                </div>
+                <div class="categories-grid" id="categories-grid">
+                    <!-- Categories will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="admin-section">
+                <div class="section-header">
+                    <h2>Cài đặt website</h2>
+                </div>
+                <div class="settings-container">
+                    <div class="setting-group">
+                        <h3>Thông tin website</h3>
+                        <div class="form-group">
+                            <label>Tên website:</label>
+                            <input type="text" id="site-name" value="GameShop">
+                        </div>
+                        <div class="form-group">
+                            <label>Slogan:</label>
+                            <input type="text" id="site-slogan" value="Cung Cấp Các Dịch Vụ Hack Uy Tín">
+                        </div>
+                        <div class="form-group">
+    <label>Logo website (link ảnh):</label>
+    <input type="url" id="site-logo-url" placeholder="https://link-den-logo.png">
+</div>
+                    </div>
+                    <div class="setting-group">
+                        <h3>Liên hệ</h3>
+                        <div class="form-group">
+                            <label>Số điện thoại Zalo:</label>
+                            <input type="text" id="zalo-phone" value="0123456789">
+                        </div>
+                        <div class="form-group">
+                            <label>Facebook:</label>
+                            <input type="text" id="facebook-link" value="GameShop.vn">
+                        </div>
+                        <div class="form-group">
+                            <label>Telegram:</label>
+                            <input type="text" id="telegram-link" value="@gameshop_support">
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="saveSettings()">
+                        <i class="fas fa-save"></i> Lưu cài đặt
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="product-modal-title">Thêm sản phẩm mới</h3>
+                <span class="close" onclick="closeModal('add-product-modal')">&times;</span>
+            </div>
+            <form id="add-product-form" class="modal-form" data-mode="add">
+                <div class="form-group">
+                    <label>Tên sản phẩm:</label>
+                    <input type="text" id="product-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Danh mục:</label>
+                    <select id="product-category" required>
+                        <option value="lien-quan">Liên Quân Mobile</option>
+                        <option value="pubg">PUBG Mobile</option>
+                        <option value="free-fire">Free Fire</option>
+                        <option value="genshin">Genshin Impact</option>
+                        <option value="valorant">Valorant</option>
+                        <option value="fifa">FIFA Mobile</option>
+                    </select>
+                </div>
+                <div class="form-group">
+    <label>Các mức giá (VNĐ):</label>
+    <div id="price-list">
+        <!-- JS sẽ tự thêm các dòng giá vào đây -->
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" id="add-price-btn">
+        <i class="fas fa-plus"></i> Thêm giá
+    </button>
+    <small style="display:block;margin-top:6px;color:#777;">
+        Mỗi dòng = 1 mức giá. Ví dụ: 300000 + "/tháng", 800000 + "/vĩnh viễn"
+    </small>
+</div>
+                <div class="form-group">
+    <label>Mô tả ngắn:</label>
+    <textarea id="product-description" rows="3"></textarea>
+</div>
+<div class="form-group">
+    <label>Mô tả chi tiết:</label>
+    <textarea id="product-full-description" rows="5"></textarea>
+</div>
+<div class="form-group">
+    <label>Hình ảnh URL (ảnh chính):</label>
+    <input type="url" id="product-image">
+</div>
+<div class="form-group">
+    <label>Ảnh phụ (mỗi dòng 1 link ảnh):</label>
+    <textarea id="product-extra-images" rows="3" placeholder="https://link-1.jpg
+https://link-2.png"></textarea>
+</div>
+<div class="form-group">
+    <label>Badge:</label>
+    <select id="product-badge">
+        <option value="NEW">NEW</option>
+        <option value="HOT">HOT</option>
+        <option value="SALE">SALE</option>
+        <option value="VIP">VIP</option>
+        <option value="PREMIUM">PREMIUM</option>
+    </select>
+</div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('add-product-modal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="product-modal-submit">Thêm sản phẩm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Category Modal (TÁCH RIÊNG) -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="category-modal-title">Thêm danh mục mới</h3>
+                <span class="close" onclick="closeModal('category-modal')">&times;</span>
+            </div>
+            <form id="category-form" class="modal-form" data-mode="add">
+    <div class="form-group">
+        <label>Tên danh mục:</label>
+        <input type="text" id="category-name" required>
+    </div>
+    <div class="form-group">
+        <label>Mã danh mục (id):</label>
+        <input type="text" id="category-id" placeholder="vd: lien-quan" required>
+    </div>
+    <div class="form-group">
+        <label>Logo danh mục (link ảnh):</label>
+        <input type="url" id="category-logo" placeholder="https://link-den-logo.png">
+    </div>
+    <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('category-modal')">Hủy</button>
+        <button type="submit" class="btn btn-primary" id="category-submit-btn">Thêm danh mục</button>
+    </div>
+</form>
+        </div>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>
