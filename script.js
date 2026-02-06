@@ -339,15 +339,24 @@ function renderNavCategories() {
 }
 
 // ====================== HIỂN THỊ SECTION & SẢN PHẨM ======================
-function showHome() {
+function showHome(fromPopstate = false) {
+    // Ẩn tất cả section
     document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
+    
+    // Hiện trang Home
     const home = document.getElementById("home-section");
     if (home) home.classList.add("active");
+    
+    // Reset trạng thái hiện tại
     currentCategory = "";
     currentProduct = null;
-}
 
-function showCategory(category) {
+    // Nếu không phải do popstate (tức là người dùng tự bấm), thì mới push vào lịch sử
+    if (!fromPopstate) {
+        history.pushState({ page: "home" }, "", "#home");
+    }
+}
+function showCategory(category, fromPopstate = false) {
     currentCategory = category;
     document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
     const secCat = document.getElementById("category-section");
@@ -360,6 +369,10 @@ function showCategory(category) {
     if (catTitle) catTitle.textContent = name;
 
     renderCategoryProducts(category);
+
+    if (!fromPopstate) {
+        history.pushState({ page: "category", category }, "", "#category-" + category);
+    }
 }
 
 function renderCategoryProducts(category) {
@@ -412,7 +425,7 @@ function findProductById(id) {
     return null;
 }
 
-function showProductDetail(productId) {
+function showProductDetail(productId, fromPopstate = false) {
     const product = findProductById(productId);
     if (!product) return;
 
@@ -433,8 +446,10 @@ function showProductDetail(productId) {
     detailContent.innerHTML = `
         <div class="product-detail">
             <div>
-                <div class="product-detail-image" id="main-product-image"
-                     style="background-image:url('${product.image}')"></div>
+                <div class="product-detail-image"
+                     style="background-image:url('${product.image}')"
+                     onclick="openImageViewer('${product.image}')">
+                </div>
                 ${extra.length ? `
                     <div class="product-gallery">
                         ${extra.map(url => `
@@ -471,6 +486,10 @@ function showProductDetail(productId) {
             </div>
         </div>
     `;
+
+    if (!fromPopstate) {
+        history.pushState({ page: "product", id: productId }, "", "#product-" + productId);
+    }
 }
 
 function changeMainImage(url) {
@@ -685,3 +704,31 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     showHome();
 });
+
+// Xử lý nút back/forward của trình duyệt & nút back trên điện thoại
+window.addEventListener("popstate", function (event) {
+    const state = event.state;
+
+    if (!state || !state.page) {
+        // Không có state → về trang chủ
+        showHome(true);
+        return;
+    }
+
+    if (state.page === "home") {
+        showHome(true);
+    } else if (state.page === "category") {
+        showCategory(state.category, true);
+    } else if (state.page === "product") {
+        showProductDetail(state.id, true);
+    }
+});
+
+function openImageViewer(url) {
+    document.getElementById("imageViewerImg").src = url;
+    document.getElementById("imageViewer").style.display = "flex";
+}
+
+function closeImageViewer() {
+    document.getElementById("imageViewer").style.display = "none";
+}
