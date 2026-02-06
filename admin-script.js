@@ -1,17 +1,47 @@
-// ===== CẤU HÌNH ĐĂNG NHẬP =====
+// ================== CẤU HÌNH ĐĂNG NHẬP ==================
 const ADMIN_CREDENTIALS = {
     username: "1",
     password: "1"
 };
 
-// ===== KHÓA LOCALSTORAGE (DÙNG CHUNG VỚI WEB BÁN HÀNG) =====
+// ================== KHÓA LOCALSTORAGE (BACKUP OFFLINE) ==================
 const STORAGE_KEYS = {
     products: "gs_admin_products",
     categories: "gs_admin_categories",
     settings: "gs_admin_settings"
 };
 
-// ===== DỮ LIỆU MẶC ĐỊNH (NẾU CHƯA CÓ LOCALSTORAGE) =====
+// ================== FIREBASE CONFIG ==================
+const firebaseConfig = {
+    apiKey: "AIzaSyDHUzqvlu3us07R9j-8ug8wdc2E5aiHQ5c",
+    authDomain: "gameshop-a80e7.firebaseapp.com",
+    projectId: "gameshop-a80e7",
+    storageBucket: "gameshop-a80e7.firebasestorage.app",
+    messagingSenderId: "66491071755",
+    appId: "1:66491071755:web:120abe0efff427224da4b2e",
+    measurementId: "G-03BQK57ZQ"
+};
+
+let DATA_DOC_REF = null;
+
+(function initFirebaseForAdmin() {
+    try {
+        if (typeof firebase === "undefined") {
+            console.warn("Firebase SDK chưa tải. Hãy kiểm tra script trong admin.html");
+            return;
+        }
+        if (!firebase.apps || firebase.apps.length === 0) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        DATA_DOC_REF = db.collection("gameshop").doc("globalData");
+        console.log("Firebase (Admin) đã khởi tạo");
+    } catch (e) {
+        console.error("Lỗi khởi tạo Firebase (Admin):", e);
+    }
+})();
+
+// ================== DỮ LIỆU MẶC ĐỊNH ==================
 let adminData = {
     products: [
         {
@@ -19,11 +49,15 @@ let adminData = {
             name: "Liên Quân VIP Kim Cương",
             category: "lien-quan",
             price: 500000,
+            prices: [
+                { amount: 500000, label: "/tháng" }
+            ],
             image: "https://via.placeholder.com/300x200/4CAF50/white?text=Lien+Quan+VIP",
             status: "active",
             description: "Tài khoản Liên Quân rank Kim Cương",
             fullDescription: "Tài khoản Liên Quân VIP, nhiều tướng & trang phục.",
-            badge: "HOT"
+            badge: "HOT",
+            extraImages: []
         }
     ],
     categories: [
@@ -40,7 +74,7 @@ let isLoggedIn = false;
 let currentEditingProductId = null;
 let currentEditingCategoryId = null;
 
-// ===== TIỆN ÍCH =====
+// ================== TIỆN ÍCH ==================
 function formatCurrency(amount) {
     return new Intl.NumberFormat("vi-VN").format(amount);
 }
@@ -59,17 +93,54 @@ function populateProductCategoryOptions() {
         .join("");
 }
 
-// ===== LƯU / LOAD LOCALSTORAGE =====
+// ================== LƯU / LOAD DỮ LIỆU (FIREBASE + LOCAL) ==================
 function saveAllData() {
+    // backup localStorage (phòng khi offline)
     try {
         localStorage.setItem(STORAGE_KEYS.products, JSON.stringify(adminData.products));
         localStorage.setItem(STORAGE_KEYS.categories, JSON.stringify(adminData.categories));
     } catch (e) {
-        console.error("Lỗi lưu dữ liệu admin:", e);
+        console.error("Lỗi lưu dữ liệu admin (localStorage):", e);
     }
+
+    if (!DATA_DOC_REF) return;
+
+    DATA_DOC_REF.set(
+        {
+            products: adminData.products,
+            categories: adminData.categories
+        },
+        { merge: true }
+    ).then(() => {
+        console.log("Đã lưu dữ liệu admin lên Firestore");
+    }).catch(err => {
+        console.error("Lỗi lưu dữ liệu admin (Firestore):", err);
+        showNotification("Không thể lưu dữ liệu lên server!", "error");
+    });
 }
 
-function loadAllData() {
+async function loadAllData() {
+    // 1. Ưu tiên load từ Firestore
+    if (DATA_DOC_REF) {
+        try {
+            const snap = await DATA_DOC_REF.get();
+            if (snap.exists) {
+                const data = snap.data() || {};
+                if (Array.isArray(data.products) && data.products.length) {
+                    adminData.products = data.products;
+                }
+                if (Array.isArray(data.categories) && data.categories.length) {
+                    adminData.categories = data.categories;
+                }
+                console.log("Đã load dữ liệu admin từ Firestore");
+                return;
+            }
+        } catch (e) {
+            console.error("Lỗi load dữ liệu admin (Firestore):", e);
+        }
+    }
+
+    // 2. Nếu Firestore chưa có / lỗi → dùng localStorage nếu có
     try {
         const p = JSON.parse(localStorage.getItem(STORAGE_KEYS.products) || "[]");
         const c = JSON.parse(localStorage.getItem(STORAGE_KEYS.categories) || "[]");
@@ -77,11 +148,11 @@ function loadAllData() {
         if (Array.isArray(p) && p.length) adminData.products = p;
         if (Array.isArray(c) && c.length) adminData.categories = c;
     } catch (e) {
-        console.error("Lỗi load dữ liệu admin:", e);
+        console.error("Lỗi load dữ liệu admin (localStorage):", e);
     }
 }
 
-// ===== LOGIN / LOGOUT =====
+// ================== LOGIN / LOGOUT ==================
 function initLogin() {
     const form = document.getElementById("login-form");
     if (!form) return;
@@ -112,7 +183,7 @@ function logout() {
     if (form) form.reset();
 }
 
-// ===== CHUYỂN SECTION =====
+// ================== CHUYỂN SECTION ==================
 function showSection(section) {
     // Active menu trái
     document.querySelectorAll(".sidebar-menu li").forEach(li => li.classList.remove("active"));
@@ -136,14 +207,14 @@ function showSection(section) {
     }
 }
 
-// ===== QUẢN LÝ SẢN PHẨM =====
+// ================== QUẢN LÝ SẢN PHẨM ==================
 function getCategoryName(categoryId) {
     if (!categoryId) return "Không có";
     const cat = adminData.categories.find(c => c.id === categoryId);
     return cat ? cat.name : categoryId;
 }
 
-// ===== NHIỀU MỨC GIÁ CHO SẢN PHẨM =====
+// ---- Nhiều mức giá ----
 function addPriceRow(amount = "", label = "") {
     const container = document.getElementById("price-list");
     if (!container) return;
@@ -182,7 +253,6 @@ function resetPriceRows(prices) {
     if (Array.isArray(prices) && prices.length) {
         prices.forEach(p => addPriceRow(p.amount, p.label));
     } else {
-        // Mặc định luôn có 1 dòng trống để nhập
         addPriceRow();
     }
 }
@@ -228,14 +298,13 @@ function showAddProductModal() {
     form.reset();
     form.dataset.mode = "add";
 
-    document.getElementById("product-modal-title").textContent = "Thêm sản phẩm mới";
-    document.getElementById("product-modal-submit").textContent = "Thêm sản phẩm";
+    const titleEl = document.getElementById("product-modal-title");
+    const submitBtn = document.getElementById("product-modal-submit");
+    if (titleEl) titleEl.textContent = "Thêm sản phẩm mới";
+    if (submitBtn) submitBtn.textContent = "Thêm sản phẩm";
 
     populateProductCategoryOptions();
-
-    // Reset các mức giá: tạo 1 dòng trống
     resetPriceRows();
-
     modal.style.display = "block";
 }
 
@@ -253,23 +322,23 @@ function editProduct(id) {
 
     document.getElementById("product-name").value = product.name || "";
     document.getElementById("product-category").value = product.category || "";
-    document.getElementById('product-description').value = product.description || '';
-    document.getElementById('product-full-description').value = product.fullDescription || '';
-    document.getElementById('product-image').value = product.image || '';
-    document.getElementById('product-extra-images').value = (product.extraImages || []).join('\n');
-    document.getElementById('product-badge').value = product.badge || 'NEW';
+    document.getElementById("product-description").value = product.description || "";
+    document.getElementById("product-full-description").value = product.fullDescription || "";
+    document.getElementById("product-image").value = product.image || "";
+    document.getElementById("product-extra-images").value = (product.extraImages || []).join("\n");
 
-    // Nếu sản phẩm có mảng prices thì dùng, không thì convert từ price cũ
+    const badgeInput = document.getElementById("product-badge");
+    if (badgeInput) badgeInput.value = product.badge || "NEW";
+
     const prices = Array.isArray(product.prices) && product.prices.length
         ? product.prices
-        : (product.price
-            ? [{ amount: product.price, label: "" }]
-            : []);
-
+        : (product.price ? [{ amount: product.price, label: "" }] : []);
     resetPriceRows(prices);
 
-    document.getElementById("product-modal-title").textContent = "Sửa sản phẩm";
-    document.getElementById("product-modal-submit").textContent = "Lưu thay đổi";
+    const titleEl = document.getElementById("product-modal-title");
+    const submitBtn = document.getElementById("product-modal-submit");
+    if (titleEl) titleEl.textContent = "Sửa sản phẩm";
+    if (submitBtn) submitBtn.textContent = "Lưu thay đổi";
 
     modal.style.display = "block";
 }
@@ -284,7 +353,7 @@ function deleteProduct(id) {
     showNotification("Đã xóa sản phẩm!", "success");
 }
 
-// submit form sản phẩm (THÊM + SỬA)
+// Submit form (thêm + sửa)
 function initProductForm() {
     const form = document.getElementById("add-product-form");
     if (!form) return;
@@ -293,41 +362,40 @@ function initProductForm() {
         e.preventDefault();
         const mode = this.dataset.mode || "add";
 
-        // Lấy danh sách ảnh phụ: mỗi dòng 1 link
+        // ---- ảnh phụ ----
         const extraImages = document
             .getElementById("product-extra-images")
             .value
             .split("\n")
             .map(s => s.trim())
-            .filter(Boolean); // bỏ dòng trống
+            .filter(Boolean);
 
-          // Lấy danh sách mức giá từ các dòng
-const priceRows = document.querySelectorAll("#price-list .price-row");
-const prices = [];
-priceRows.forEach(row => {
-    const amount = parseInt(row.querySelector(".price-amount").value) || 0;
-    const label = row.querySelector(".price-label").value.trim();
-    if (amount > 0) {
-        prices.push({ amount, label });
-    }
-});
+        // ---- danh sách giá ----
+        const priceRows = document.querySelectorAll("#price-list .price-row");
+        const prices = [];
+        priceRows.forEach(row => {
+            const amount = parseInt(row.querySelector(".price-amount").value) || 0;
+            const label = row.querySelector(".price-label").value.trim();
+            if (amount > 0) {
+                prices.push({ amount, label });
+            }
+        });
+        const mainPrice = prices.length ? prices[0].amount : 0;
 
-const mainPrice = prices.length ? prices[0].amount : 0;
-
-const data = {
-    name: document.getElementById("product-name").value.trim(),
-    category: document.getElementById("product-category").value,
-    price: mainPrice,                 // giữ lại price chính = mức giá đầu
-    prices: prices,                   // <=== mảng nhiều giá
-    description: document.getElementById("product-description").value.trim(),
-    fullDescription: document.getElementById("product-full-description").value.trim(),
-    image:
-        document.getElementById("product-image").value.trim() ||
-        "https://via.placeholder.com/300x200/666/ffffff?text=No+Image",
-    extraImages: extraImages,
-    badge: document.getElementById("product-badge").value || "NEW",
-    status: "active"
-};
+        const data = {
+            name: document.getElementById("product-name").value.trim(),
+            category: document.getElementById("product-category").value,
+            price: mainPrice,
+            prices: prices,
+            description: document.getElementById("product-description").value.trim(),
+            fullDescription: document.getElementById("product-full-description").value.trim(),
+            image:
+                document.getElementById("product-image").value.trim() ||
+                "https://via.placeholder.com/300x200/666/ffffff?text=No+Image",
+            extraImages: extraImages,
+            badge: (document.getElementById("product-badge")?.value || "NEW"),
+            status: "active"
+        };
 
         if (!data.name) {
             showNotification("Vui lòng nhập tên sản phẩm!", "error");
@@ -364,7 +432,8 @@ const data = {
         currentEditingProductId = null;
     });
 }
-// ===== QUẢN LÝ DANH MỤC (CÓ LOGO) =====
+
+// ================== QUẢN LÝ DANH MỤC (CÓ LOGO) ==================
 function loadCategories() {
     const grid = document.getElementById("categories-grid");
     if (!grid) return;
@@ -470,66 +539,65 @@ function initCategoryForm() {
         const mode = this.dataset.mode || "add";
 
         const name = document.getElementById("category-name").value.trim();
-        const id = document.getElementById("category-id").value.trim();
+        const id   = document.getElementById("category-id").value.trim();
         const logo = document.getElementById("category-logo").value.trim();
 
         if (!name || !id) {
-            showNotification("Nhập đầy đủ Tên và Mã danh mục!", "error");
+            showNotification("Vui lòng nhập đầy đủ ID và tên danh mục!", "error");
             return;
         }
 
-        if (mode === "add") {
-            const exist = adminData.categories.some(c => c.id === id);
-            if (exist) {
-                showNotification("Mã danh mục đã tồn tại!", "error");
+        if (mode === "edit" && currentEditingCategoryId) {
+            const idx = adminData.categories.findIndex(c => c.id === currentEditingCategoryId);
+            if (idx !== -1) {
+                adminData.categories[idx] = {
+                    ...adminData.categories[idx],
+                    id,
+                    name,
+                    logo
+                };
+            }
+            // cập nhật category trong sản phẩm nếu id đổi
+            if (id !== currentEditingCategoryId) {
+                adminData.products = adminData.products.map(p =>
+                    p.category === currentEditingCategoryId ? { ...p, category: id } : p
+                );
+            }
+            showNotification("Đã cập nhật danh mục!", "success");
+        } else {
+            if (adminData.categories.some(c => c.id === id)) {
+                showNotification("ID danh mục đã tồn tại!", "error");
                 return;
             }
-            const newCat = {
+            adminData.categories.push({
                 id,
                 name,
                 logo,
-                productCount: adminData.products.filter(p => p.category === id).length
-            };
-            adminData.categories.push(newCat);
+                productCount: 0
+            });
             showNotification("Đã thêm danh mục mới!", "success");
-        } else if (mode === "edit" && currentEditingCategoryId !== null) {
-            const idx = adminData.categories.findIndex(c => c.id === currentEditingCategoryId);
-            if (idx === -1) return;
-
-            const oldId = adminData.categories[idx].id;
-            adminData.categories[idx].id = id;
-            adminData.categories[idx].name = name;
-            adminData.categories[idx].logo = logo;
-
-            if (oldId !== id) {
-                adminData.products = adminData.products.map(p =>
-                    p.category === oldId ? { ...p, category: id } : p
-                );
-            }
-            showNotification("Đã lưu danh mục!", "success");
         }
 
         updateCategoryProductCounts();
         saveAllData();
-        populateProductCategoryOptions();
         loadCategories();
-        loadProducts();
-        closeModal("category-modal");
+        populateProductCategoryOptions();
 
+        currentEditingCategoryId = null;
         this.reset();
         this.dataset.mode = "add";
-        currentEditingCategoryId = null;
+        closeModal("category-modal");
     });
 }
 
-// ===== CÀI ĐẶT WEBSITE (CÓ LOGO WEBSITE URL) =====
+// ================== CÀI ĐẶT WEBSITE ==================
 function saveSettings() {
     const siteName     = document.getElementById("site-name").value;
     const siteSlogan   = document.getElementById("site-slogan").value;
     const zaloPhone    = document.getElementById("zalo-phone").value;
     const facebookLink = document.getElementById("facebook-link").value;
     const telegramLink = document.getElementById("telegram-link").value;
-    const siteLogoUrl  = document.getElementById("site-logo-url").value; // link logo
+    const siteLogoUrl  = document.getElementById("site-logo-url").value;
 
     const settings = {
         siteName,
@@ -542,76 +610,111 @@ function saveSettings() {
 
     try {
         localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
-        showNotification("Đã lưu cài đặt!", "success");
     } catch (e) {
-        console.error("Lỗi lưu cài đặt:", e);
-        showNotification("Không thể lưu cài đặt!", "error");
+        console.error("Lỗi lưu cài đặt (localStorage):", e);
+    }
+
+    if (DATA_DOC_REF) {
+        DATA_DOC_REF.set(
+            { settings },
+            { merge: true }
+        ).then(() => {
+            showNotification("Đã lưu cài đặt!", "success");
+        }).catch(err => {
+            console.error("Lỗi lưu cài đặt (Firestore):", err);
+            showNotification("Không thể lưu cài đặt lên server!", "error");
+        });
+    } else {
+        showNotification("Đã lưu cài đặt (local)!", "success");
     }
 }
 
 function loadSettings() {
+    let settings = null;
     const settingsStr = localStorage.getItem(STORAGE_KEYS.settings);
-    if (!settingsStr) return;
+    if (settingsStr) {
+        try {
+            settings = JSON.parse(settingsStr);
+        } catch (e) {
+            console.error("Lỗi parse cài đặt:", e);
+        }
+    }
 
-    try {
-        const settings = JSON.parse(settingsStr);
-        if (settings.siteName)
-            document.getElementById("site-name").value = settings.siteName;
-        if (settings.siteSlogan)
-            document.getElementById("site-slogan").value = settings.siteSlogan;
-        if (settings.zaloPhone)
-            document.getElementById("zalo-phone").value = settings.zaloPhone;
-        if (settings.facebookLink)
-            document.getElementById("facebook-link").value = settings.facebookLink;
-        if (settings.telegramLink)
-            document.getElementById("telegram-link").value = settings.telegramLink;
-        if (settings.siteLogoUrl)
-            document.getElementById("site-logo-url").value = settings.siteLogoUrl;
-    } catch (e) {
-        console.error("Lỗi parse cài đặt:", e);
+    function apply(settingsObj) {
+        if (!settingsObj) return;
+        if (settingsObj.siteName)
+            document.getElementById("site-name").value = settingsObj.siteName;
+        if (settingsObj.siteSlogan)
+            document.getElementById("site-slogan").value = settingsObj.siteSlogan;
+        if (settingsObj.zaloPhone)
+            document.getElementById("zalo-phone").value = settingsObj.zaloPhone;
+        if (settingsObj.facebookLink)
+            document.getElementById("facebook-link").value = settingsObj.facebookLink;
+        if (settingsObj.telegramLink)
+            document.getElementById("telegram-link").value = settingsObj.telegramLink;
+        if (settingsObj.siteLogoUrl)
+            document.getElementById("site-logo-url").value = settingsObj.siteLogoUrl;
+    }
+
+    if (settings) apply(settings);
+
+    if (DATA_DOC_REF) {
+        DATA_DOC_REF.get().then(snap => {
+            if (!snap.exists) return;
+            const data = snap.data() || {};
+            if (data.settings) {
+                apply(data.settings);
+            }
+        }).catch(err => {
+            console.error("Lỗi load cài đặt (Firestore):", err);
+        });
     }
 }
 
-// ===== MODAL & THÔNG BÁO =====
+// ================== MODAL & THÔNG BÁO ==================
 function closeModal(id) {
     const modal = document.getElementById(id);
     if (modal) modal.style.display = "none";
 }
 
-window.addEventListener("click", function (e) {
-    if (e.target.classList.contains("modal")) {
-        e.target.style.display = "none";
-    }
-});
-
 function showNotification(message, type = "info") {
-    const notify = document.createElement("div");
-    notify.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 10px 16px;
-        border-radius: 6px;
-        color: #fff;
-        z-index: 9999;
-        font-size: 14px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    `;
-    const colors = {
-        success: "#27ae60",
-        error: "#e74c3c",
-        info: "#3498db",
-        warning: "#f39c12"
-    };
-    notify.style.background = colors[type] || colors.info;
-    notify.textContent = message;
-    document.body.appendChild(notify);
-    setTimeout(() => notify.remove(), 3000);
+    let box = document.getElementById("admin-notification");
+    if (!box) {
+        box = document.createElement("div");
+        box.id = "admin-notification";
+        box.style.position = "fixed";
+        box.style.right = "20px";
+        box.style.bottom = "20px";
+        box.style.zIndex = "5000";
+        document.body.appendChild(box);
+    }
+
+    const item = document.createElement("div");
+    item.textContent = message;
+    item.style.marginTop = "8px";
+    item.style.padding = "10px 16px";
+    item.style.borderRadius = "6px";
+    item.style.color = "#fff";
+    item.style.boxShadow = "0 2px 8px rgba(0,0,0,0.2)";
+    item.style.fontSize = "14px";
+
+    let bg = "#3498db";
+    if (type === "success") bg = "#27ae60";
+    if (type === "error") bg = "#e74c3c";
+    item.style.background = bg;
+
+    box.appendChild(item);
+
+    setTimeout(() => {
+        item.style.opacity = "0";
+        item.style.transition = "opacity 0.4s";
+        setTimeout(() => item.remove(), 400);
+    }, 2500);
 }
 
-// ===== KHỞI TẠO =====
-document.addEventListener("DOMContentLoaded", function () {
-    loadAllData();
+// ================== KHỞI TẠO ==================
+document.addEventListener("DOMContentLoaded", async function () {
+    await loadAllData();
     updateCategoryProductCounts();
     populateProductCategoryOptions();
 
@@ -619,11 +722,19 @@ document.addEventListener("DOMContentLoaded", function () {
     initProductForm();
     initCategoryForm();
     loadSettings();
-});
 
-document.addEventListener("DOMContentLoaded", () => {
+    // nút thêm dòng giá
     const addPriceBtn = document.getElementById("add-price-btn");
     if (addPriceBtn) {
         addPriceBtn.addEventListener("click", () => addPriceRow());
     }
+
+    // đóng modal khi click ra ngoài
+    window.addEventListener("click", function (e) {
+        const addProductModal = document.getElementById("add-product-modal");
+        const categoryModal   = document.getElementById("category-modal");
+
+        if (e.target === addProductModal) closeModal("add-product-modal");
+        if (e.target === categoryModal) closeModal("category-modal");
+    });
 });
